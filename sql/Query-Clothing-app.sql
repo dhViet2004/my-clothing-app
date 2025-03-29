@@ -70,7 +70,9 @@ CREATE TABLE payments (
     payment_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (order_id) REFERENCES orders(order_id)
 );
-
+-- Thêm cột url vào bảng products
+ALTER TABLE products
+ADD COLUMN url VARCHAR(255) AFTER category; -- Thêm cột url sau cột category, giới hạn 255 ký tự
 
 INSERT INTO products (name, description, price, stock_quantity, category)
 VALUES ('Quần Jeans Xanh', 'Quần jeans nam màu xanh, size 32', 500000.00, 50, 'quan_jean');
@@ -78,3 +80,4 @@ VALUES ('Quần Jeans Xanh', 'Quần jeans nam màu xanh, size 32', 500000.00, 5
 INSERT INTO users (username, password, full_name, email, role) 
 VALUES ('client1', 'password123', 'Nguyen Van A', 'client1@email.com', 'client'),
        ('admin1', 'admin123', 'Tran Thi B', 'admin1@email.com', 'admin');
+       
