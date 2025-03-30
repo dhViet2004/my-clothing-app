@@ -1,33 +1,59 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Table, Tag, Space, Button, Modal, message } from 'antd';
+import { Table, Tag, Space, Button, Modal, message, Input, Form, Select } from 'antd';
 import { EditOutlined, DeleteOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 
 const { confirm } = Modal;
+const { Option } = Select;
 
 const ProductList = ({ searchQuery, refreshKey, setRefreshKey }) => {
     const [products, setProducts] = useState([]);
     const [loading, setLoading] = useState(false);
     const [deleteLoadingId, setDeleteLoadingId] = useState(null);
+    const [editModalOpen, setEditModalOpen] = useState(false);
+    const [editingProduct, setEditingProduct] = useState(null);
     const [pagination, setPagination] = useState({
         current: 1,
         pageSize: 10,
+        total: 0,
     });
+    const [form] = Form.useForm();
 
+    // Fetch products from API
     const fetchProducts = async () => {
         setLoading(true);
         try {
             const response = await axios.get('http://localhost:8080/products', {
                 params: {
-                    search: searchQuery,
+                    search: searchQuery || undefined,
                     page: pagination.current,
-                    pageSize: pagination.pageSize
+                    pageSize: pagination.pageSize,
                 }
             });
-            setProducts(response.data);
+
+            let productsData = [];
+            let totalCount = 0;
+
+            if (Array.isArray(response.data)) {
+                productsData = response.data;
+                totalCount = response.data.length;
+            } else if (response.data && Array.isArray(response.data.data)) {
+                productsData = response.data.data;
+                totalCount = response.data.pagination?.total || response.data.data.length;
+            } else {
+                throw new Error('Invalid API response structure');
+            }
+
+            setProducts(productsData);
+            setPagination(prev => ({
+                ...prev,
+                total: totalCount
+            }));
+
         } catch (error) {
-            console.error('Lỗi khi lấy sản phẩm:', error);
-            message.error('Không thể tải danh sách sản phẩm');
+            console.error('Error fetching products:', error);
+            message.error('Failed to load products');
+            setProducts([]);
         } finally {
             setLoading(false);
         }
@@ -35,85 +61,171 @@ const ProductList = ({ searchQuery, refreshKey, setRefreshKey }) => {
 
     useEffect(() => {
         fetchProducts();
-    }, [searchQuery, pagination, refreshKey]);
+    }, [searchQuery, pagination.current, pagination.pageSize, refreshKey]);
 
-    const showDeleteConfirm = (productId) => {
+    // Delete confirmation
+    const showDeleteConfirm = (product) => {
+        let inputValue = '';
+
         confirm({
-            title: 'Xác nhận xóa sản phẩm',
+            title: 'Confirm Delete',
             icon: <ExclamationCircleOutlined />,
-            content: 'Bạn có chắc chắn muốn xóa sản phẩm này?',
-            okText: 'Xóa',
+            content: (
+                <div>
+                    <p>Are you sure you want to delete {product.name}?</p>
+                    <Input
+                        placeholder="Type product name to confirm"
+                        onChange={(e) => (inputValue = e.target.value)}
+                    />
+                </div>
+            ),
+            okText: 'Delete',
             okType: 'danger',
-            cancelText: 'Hủy',
+            cancelText: 'Cancel',
             onOk() {
-                return handleDelete(productId);
-            },
+                return new Promise((resolve, reject) => {
+                    if (inputValue === product.name) {
+                        handleDelete(product.product_id).then(resolve).catch(reject);
+                    } else {
+                        message.error('Product name does not match!');
+                        reject();
+                    }
+                });
+            }
         });
     };
 
     const handleDelete = async (productId) => {
         setDeleteLoadingId(productId);
         try {
-            await axios.delete(`http://localhost:8080/products/${productId}`);
-            message.success('Xóa sản phẩm thành công');
-            setRefreshKey(prev => prev + 1);
+            const response = await axios.delete(`http://localhost:8080/products/${productId}`);
+
+            if (response.status === 200) {
+                message.success(response.data.message);
+                setProducts(prev => prev.filter(p => p.product_id !== productId));
+                setPagination(prev => ({
+                    ...prev,
+                    total: prev.total - 1,
+                }));
+            }
         } catch (error) {
-            console.error('Lỗi khi xóa sản phẩm:', error);
-            message.error('Xóa sản phẩm thất bại');
+            console.error('Delete error details:', error);
+            if (error.response) {
+                if (error.response.status === 404) {
+                    message.error('Không tìm thấy sản phẩm để xóa');
+                } else {
+                    message.error(error.response.data?.error || 'Xóa thất bại');
+                }
+            } else {
+                message.error('Lỗi kết nối đến server');
+            }
         } finally {
             setDeleteLoadingId(null);
         }
     };
 
+    const handleEdit = (product) => {
+        if (!product) {
+            console.error('Invalid product data');
+            message.error('Cannot edit: Invalid product data');
+            return;
+        }
+
+        setEditingProduct(product);
+        form.setFieldsValue({
+            name: product.name || '',
+            description: product.description || '',
+            price: product.price ? product.price.toString() : '0',
+            stock_quantity: product.stock_quantity ? product.stock_quantity.toString() : '0',
+            category: product.category || 'quan_jean',
+            url: product.url || ''
+        });
+        setEditModalOpen(true);
+    };
+
+    const handleUpdate = async (values) => {
+        try {
+            const response = await axios.put(
+                `http://localhost:8080/products/${editingProduct.product_id}`,
+                {
+                    name: values.name,
+                    description: values.description || '',
+                    price: parseFloat(values.price),
+                    stock_quantity: parseInt(values.stock_quantity, 10),
+                    category: values.category,
+                    url: values.url || editingProduct.url
+                }
+            );
+
+            if (response.data && response.data.message) {
+                message.success(response.data.message);
+                fetchProducts(); 
+                setRefreshKey(prev => prev + 1);
+                setEditModalOpen(false);
+                form.resetFields();
+            } else {
+                message.error('Cập nhật thất bại');
+            }
+        } catch (error) {
+            console.error('Lỗi cập nhật:', error);
+            if (error.response) {
+                message.error(error.response.data?.error || 'Lỗi từ server');
+            } else {
+                message.error('Lỗi kết nối server');
+            }
+        }
+    };
+
+    // Table columns
     const columns = [
         {
-            title: 'Tên sản phẩm',
+            title: 'Product Name',
             dataIndex: 'name',
             key: 'name',
-            render: (text) => <span className="font-medium">{text}</span>,
+            render: text => <span className="font-medium">{text}</span>,
         },
         {
-            title: 'Danh mục',
+            title: 'Category',
             dataIndex: 'category',
             key: 'category',
-            render: (category) => <Tag color="blue">{category}</Tag>,
+            render: category => <Tag color="blue">{category}</Tag>,
         },
         {
-            title: 'Giá',
+            title: 'Price',
             dataIndex: 'price',
             key: 'price',
-            render: (price) => (
+            render: price => (
                 <span className="font-semibold">
-                    {new Intl.NumberFormat('vi-VN', { 
-                        style: 'currency', 
-                        currency: 'VND' 
+                    {new Intl.NumberFormat('vi-VN', {
+                        style: 'currency',
+                        currency: 'VND'
                     }).format(price)}
                 </span>
             ),
         },
         {
-            title: 'Tồn kho',
+            title: 'Stock',
             dataIndex: 'stock_quantity',
             key: 'stock_quantity',
-            render: (quantity) => (
+            render: quantity => (
                 <Tag color={quantity > 0 ? 'green' : 'red'}>
-                    {quantity > 0 ? `Còn ${quantity}` : 'Hết hàng'}
+                    {quantity > 0 ? `In stock: ${quantity}` : 'Out of stock'}
                 </Tag>
             ),
         },
         {
-            title: 'Thao tác',
+            title: 'Actions',
             key: 'action',
             render: (_, record) => (
                 <Space size="middle">
-                    <Button 
+                    <Button
                         icon={<EditOutlined />}
-                        onClick={() => console.log('Edit:', record.product_id)}
+                        onClick={() => handleEdit(record)}
                     />
-                    <Button 
-                        danger 
+                    <Button
+                        danger
                         icon={<DeleteOutlined />}
-                        onClick={() => showDeleteConfirm(record.product_id)}
+                        onClick={() => showDeleteConfirm(record)}
                         loading={deleteLoadingId === record.product_id}
                     />
                 </Space>
@@ -121,21 +233,110 @@ const ProductList = ({ searchQuery, refreshKey, setRefreshKey }) => {
         },
     ];
 
-    return (
-        <Table
-            columns={columns}
-            dataSource={products}
-            rowKey="product_id"
-            loading={loading}
-            pagination={{
-                ...pagination,
-                showSizeChanger: true,
-                pageSizeOptions: ['10', '20', '50'],
-                showTotal: (total) => `Tổng ${total} sản phẩm`,
+    // Edit modal
+    const EditModal = () => (
+        <Modal
+            title="Edit Product"
+            open={editModalOpen}
+            onCancel={() => {
+                setEditModalOpen(false);
+                form.resetFields();
             }}
-            onChange={(newPagination) => setPagination(newPagination)}
-            scroll={{ x: true }}
-        />
+            footer={null}
+            destroyOnClose
+        >
+            <Form form={form} onFinish={handleUpdate} layout="vertical">
+                <Form.Item
+                    name="name"
+                    label="Product Name"
+                    rules={[{ required: true, message: 'Please input product name!' }]}
+                >
+                    <Input />
+                </Form.Item>
+                <Form.Item
+                    name="url"
+                    label="Image URL"
+                    rules={[{ type: 'text', message: 'Please enter a valid URL!' }]}
+                >
+                    <Input placeholder="/images/image.jpg" />
+                </Form.Item>
+                <Form.Item name="description" label="Description">
+                    <Input.TextArea rows={3} />
+                </Form.Item>
+
+                <Form.Item
+                    name="price"
+                    label="Price"
+                    rules={[
+                        { required: true, message: 'Please input price!' },
+                        {
+                            validator: (_, value) =>
+                                value && !isNaN(value) ? Promise.resolve() : Promise.reject('Invalid price!')
+                        }
+                    ]}
+                >
+                    <Input type="number" min={0} step="0.01" />
+                </Form.Item>
+
+                <Form.Item
+                    name="stock_quantity"
+                    label="Stock Quantity"
+                    rules={[
+                        { required: true, message: 'Please input quantity!' },
+                        { pattern: /^\d+$/, message: 'Must be integer!' },
+                    ]}
+                >
+                    <Input type="number" min={0} step="1" />
+                </Form.Item>
+
+                <Form.Item
+                    name="category"
+                    label="Category"
+                    rules={[{ required: true, message: 'Please select category!' }]}
+                >
+                    <Select placeholder="Select category">
+                        <Option value="quan_jean">Jeans</Option>
+                        <Option value="quan_ao">Clothing</Option>
+                        <Option value="ao_khoac">Jacket</Option>
+                        <Option value="ao_so_mi">Shirt</Option>
+                        <Option value="ao_len">Sweater</Option>
+                    </Select>
+                </Form.Item>
+
+                <Form.Item>
+                    <Space>
+                        <Button type="primary" htmlType="submit" loading={loading}>
+                            Update
+                        </Button>
+                        <Button onClick={() => setEditModalOpen(false)}>
+                            Cancel
+                        </Button>
+                    </Space>
+                </Form.Item>
+            </Form>
+        </Modal>
+    );
+
+    return (
+        <>
+            <Table
+                columns={columns}
+                dataSource={products.map(p => ({ ...p, key: p.product_id }))}
+                rowKey="product_id"
+                loading={loading}
+                pagination={{
+                    ...pagination,
+                    showSizeChanger: true,
+                    pageSizeOptions: ['10', '20', '50'],
+                    showTotal: total => `Total ${total} products`,
+                }}
+                onChange={(newPagination) => {
+                    setPagination(newPagination);
+                }}
+                scroll={{ x: 'max-content' }}
+            />
+            <EditModal />
+        </>
     );
 };
 

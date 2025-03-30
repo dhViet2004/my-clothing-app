@@ -9,7 +9,7 @@ const AddProduct = () => {
     description: '',
     price: '',
     stock_quantity: '',
-    category: 'quan_jean', // Giá trị mặc định phù hợp với ENUM trong database
+    category: 'quan_jean',
     url: ''
   });
   const [error, setError] = useState('');
@@ -34,6 +34,12 @@ const AddProduct = () => {
       return;
     }
 
+    // Validate number fields
+    if (isNaN(product.price) || isNaN(product.stock_quantity)) {
+      setError('Giá và số lượng phải là số');
+      return;
+    }
+
     // Convert number fields
     const productData = {
       ...product,
@@ -43,22 +49,12 @@ const AddProduct = () => {
 
     try {
       const response = await axios.post('http://localhost:8080/products', productData);
-      setSuccess('Sản phẩm đã được thêm thành công!');
+      setSuccess('Sản phẩm đã được thêm thành công! Đang chuyển hướng...');
       
       setTimeout(() => {
-        // Reset form
-        setProduct({
-          name: '',
-          description: '',
-          price: '',
-          stock_quantity: '',
-          category: 'quan_jean',
-          url: ''
-        });
-        setSuccess('');
-        // Điều hướng đến danh sách sản phẩm
-        navigate('/products');
-      }, 2000);
+        navigate('/ManagerProducts');
+      }, 500);
+      
     } catch (err) {
       console.error('Lỗi khi thêm sản phẩm:', err);
       setError(err.response?.data?.error || 'Đã xảy ra lỗi khi thêm sản phẩm. Vui lòng thử lại.');
@@ -148,14 +144,14 @@ const AddProduct = () => {
             value={product.url}
             onChange={handleChange}
             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border"
-            placeholder="https://example.com/image.jpg"
+            placeholder="/images/image.jpg"
           />
         </div>
 
         <div className="flex justify-end space-x-3">
           <button
             type="button"
-            onClick={() => navigate('/products')}
+            onClick={() => navigate('/ManagerProducts')}
             className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
           >
             Hủy
