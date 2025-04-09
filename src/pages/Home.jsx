@@ -6,9 +6,8 @@ import 'swiper/css';
 import 'swiper/css/pagination';
 import 'swiper/css/navigation';
 import ProductCard from '../components/ProductCard';
-import { Row, Col, Typography, Skeleton } from 'antd';
+import { Row, Col, Typography, Skeleton, Button } from 'antd';
 import axios from 'axios';
-import { Button } from 'antd';  // Thêm dòng này
 
 const { Title } = Typography;
 
@@ -24,18 +23,16 @@ function Home() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
-    // Fetch sản phẩm từ API
     useEffect(() => {
         const fetchProducts = async () => {
             try {
                 const response = await axios.get('http://localhost:8080/products', {
                     params: {
                         page: 1,
-                        pageSize: 8 // Lấy 8 sản phẩm cho trang chủ
+                        pageSize: 8
                     }
                 });
                 
-                // Xử lý response theo API của bạn
                 const productsData = response.data.data || response.data || [];
                 setProducts(productsData);
             } catch (err) {
@@ -98,40 +95,43 @@ function Home() {
             {/* Product Section */}
             <div className="container mx-auto px-4 py-8">
                 <Title level={2} className="text-center mb-8">Sản Phẩm Nổi Bật</Title>
-                
                 {loading ? (
                     <Row gutter={[16, 16]}>
-                        {[...Array(4)].map((_, index) => (
-                            <Col key={index} xs={24} sm={12} md={8} lg={6}>
-                                <Skeleton active />
+                        {[...Array(8)].map((_, index) => (
+                            <Col key={index} xs={12} sm={12} md={8} lg={6} xl={6}>
+                                <Skeleton active paragraph={{ rows: 3 }} />
                             </Col>
                         ))}
                     </Row>
                 ) : error ? (
                     <div className="text-center text-red-500">{error}</div>
                 ) : (
-                    <Row gutter={[16, 16]}>
+                    <Row gutter={[16, 24]}>
                         {products.map(product => (
-                            <Col key={product.product_id} xs={24} sm={12} md={8} lg={6}>
+                            <Col 
+                                key={product.product_id} 
+                                xs={12} 
+                                sm={12} 
+                                md={8} 
+                                lg={6} 
+                                xl={6}
+                                className="flex justify-center"
+                            >
                                 <ProductCard 
                                     product={product}
-                                    // Bạn có thể thêm các props khác nếu cần
-                                    // onEdit={handleEdit}
-                                    // onDelete={handleDelete}
+                                    className="w-full max-w-xs"
                                 />
                             </Col>
                         ))}
                     </Row>
                 )}
-
-                {/* Xem thêm sản phẩm
                 <div className="text-center mt-8">
                     <Link to="/products">
                         <Button type="primary" size="large">
                             Xem Tất Cả Sản Phẩm
                         </Button>
                     </Link>
-                </div> */}
+                </div>
             </div>
         </div>
     );

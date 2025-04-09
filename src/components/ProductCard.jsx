@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Tag, Button, Space, Skeleton, message, Rate } from 'antd';
+import { Card, Tag, Button, Space, Skeleton, message, Rate, Typography } from 'antd';
 import { ShoppingCartOutlined, HeartOutlined, EyeOutlined } from '@ant-design/icons';
 import { useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
 
 const { Meta } = Card;
+const { Text, Paragraph } = Typography;
 
 const ProductCard = ({
     product,
@@ -16,7 +17,6 @@ const ProductCard = ({
     const [loading, setLoading] = useState(false);
     const [isFavorite, setIsFavorite] = useState(false);
 
-    // Lấy chi tiết sản phẩm nếu là view chi tiết
     useEffect(() => {
         if (isDetailView && id) {
             const fetchProductDetail = async () => {
@@ -36,44 +36,64 @@ const ProductCard = ({
         }
     }, [id, isDetailView]);
 
-    const handleAddToCart = () => {
+    const handleAddToCart = (e) => {
+        e?.stopPropagation();
         message.success('Đã thêm vào giỏ hàng');
-        // Thêm logic thêm vào giỏ hàng ở đây
     };
 
-    const toggleFavorite = () => {
+    const toggleFavorite = (e) => {
+        e?.stopPropagation();
         setIsFavorite(!isFavorite);
         message.success(!isFavorite ? 'Đã thêm vào yêu thích' : 'Đã bỏ khỏi yêu thích');
     };
 
-    // Nếu là view chi tiết và đang loading
+    const navigateToDetail = () => {
+        if (!isDetailView) {
+            navigate(`/products/${product.product_id}`);
+        }
+    };
+
     if (isDetailView && loading) {
-        return <Skeleton active />;
+        return <Skeleton active paragraph={{ rows: 6 }} />;
     }
 
-    // Sử dụng productDetail nếu là view chi tiết, ngược lại dùng product từ props
     const currentProduct = isDetailView ? productDetail : product;
 
     if (isDetailView && !currentProduct) {
         return <div>Không tìm thấy sản phẩm</div>;
     }
 
+    // Responsive styles
+    const cardStyle = {
+        width: isDetailView ? '100%' : '100%',
+        maxWidth: isDetailView ? '800px' : '300px',
+        margin: '0 auto',
+        position: 'relative',
+        borderRadius: '8px',
+        overflow: 'hidden'
+    };
+
+    const imageStyle = {
+        height: isDetailView ? '400px' : '200px',
+        objectFit: 'cover',
+        cursor: !isDetailView ? 'pointer' : 'default',
+        transition: 'transform 0.3s',
+        width: '100%'
+    };
+
     return (
         <Card
-            hoverable
-            style={{
-                width: isDetailView ? '100%' : 240,
-                margin: '10px',
-                position: 'relative'
-            }}
+            hoverable={!isDetailView}
+            style={cardStyle}
             cover={
                 <img
                     alt={currentProduct.name}
                     src={currentProduct.url || '/images/placeholder-product.jpg'}
-                    style={{
-                        height: isDetailView ? 400 : 240,
-                        objectFit: 'cover',
-                        cursor: 'pointer'
+                    style={imageStyle}
+                    onClick={navigateToDetail}
+                    onError={(e) => {
+                        e.target.onerror = null;
+                        e.target.src = '/images/placeholder-product.jpg';
                     }}
                 />
             }
@@ -81,62 +101,66 @@ const ProductCard = ({
                 <Button
                     type="text"
                     icon={<HeartOutlined style={{ color: isFavorite ? 'red' : undefined }} />}
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        toggleFavorite();
-                    }}
+                    onClick={toggleFavorite}
+                    aria-label="Thêm vào yêu thích"
                 />,
                 <Button
                     type="text"
                     icon={<ShoppingCartOutlined />}
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        handleAddToCart();
-                    }}
+                    onClick={handleAddToCart}
+                    aria-label="Thêm vào giỏ hàng"
                 />,
                 <Button
                     type="text"
                     icon={<EyeOutlined />}
-                    onClick={() => navigate(`/products/${currentProduct.product_id}`)}
+                    onClick={navigateToDetail}
+                    aria-label="Xem chi tiết"
                 />
             ] : null}
+            styles={{ padding: isDetailView ? '24px' : '12px' }}
         >
-            <div
-                onClick={() => !isDetailView && navigate(`/products/${currentProduct.product_id}`)}
-                style={{ cursor: 'pointer' }}
-            >
+            <div onClick={!isDetailView ? navigateToDetail : undefined}>
                 <Meta
-                    title={currentProduct.name}
+                    title={<Text strong ellipsis={{ tooltip: currentProduct.name }}>{currentProduct.name}</Text>}
                     description={
-                        <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+                        <Space direction="vertical" size="small" style={{ width: '100%' }}>
                             <Rate
                                 disabled
-                                defaultValue={4.5}
+                                defaultValue={currentProduct.rating || 4.5}
                                 allowHalf
-                                style={{ fontSize: 14 }}
+                                style={{ fontSize: '14px' }}
                             />
-                            <Tag color="blue">{currentProduct.category}</Tag>
-                            <span style={{ fontWeight: 'bold', fontSize: isDetailView ? 18 : 14 }}>
+                            
+                            <Tag color="blue" style={{ marginRight: 0 }}>
+                                {currentProduct.category}
+                            </Tag>
+                            
+                            <Text strong style={{ fontSize: isDetailView ? '20px' : '16px', color: '#ff4d4f' }}>
                                 {new Intl.NumberFormat('vi-VN', {
                                     style: 'currency',
                                     currency: 'VND'
                                 }).format(currentProduct.price)}
-                            </span>
+                            </Text>
+                            
                             <Tag color={currentProduct.stock_quantity > 0 ? 'green' : 'red'}>
-                                {currentProduct.stock_quantity > 0 ? `Còn hàng` : 'Tạm hết'}
+                                {currentProduct.stock_quantity > 0 ? 'Còn hàng' : 'Tạm hết'}
                             </Tag>
 
                             {isDetailView && (
-                                <div>
-                                    <h4>Mô tả sản phẩm:</h4>
-                                    <p>{currentProduct.description || 'Không có mô tả'}</p>
+                                <div style={{ marginTop: '16px' }}>
+                                    <Paragraph>
+                                        <Text strong>Mô tả sản phẩm:</Text>
+                                        <br />
+                                        {currentProduct.description || 'Không có mô tả'}
+                                    </Paragraph>
 
                                     <Button
                                         type="primary"
                                         icon={<ShoppingCartOutlined />}
                                         size="large"
                                         onClick={handleAddToCart}
-                                        style={{ marginTop: 16 }}
+                                        style={{ marginTop: '16px', width: '100%' }}
+                                        block
                                     >
                                         Thêm vào giỏ hàng
                                     </Button>

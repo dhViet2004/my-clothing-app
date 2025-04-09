@@ -5,7 +5,7 @@ import { EditOutlined, DeleteOutlined, ExclamationCircleOutlined } from '@ant-de
 
 const { confirm } = Modal;
 const { Option } = Select;
-
+import instance from '../api/axiosConfig';
 const ProductList = ({ searchQuery, refreshKey, setRefreshKey }) => {
     const [products, setProducts] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -23,7 +23,7 @@ const ProductList = ({ searchQuery, refreshKey, setRefreshKey }) => {
     const fetchProducts = async () => {
         setLoading(true);
         try {
-            const response = await axios.get('http://localhost:8080/products', {
+            const response = await instance.get('http://localhost:8080/products', {
                 params: {
                     search: searchQuery || undefined,
                     page: pagination.current,
@@ -98,7 +98,7 @@ const ProductList = ({ searchQuery, refreshKey, setRefreshKey }) => {
     const handleDelete = async (productId) => {
         setDeleteLoadingId(productId);
         try {
-            const response = await axios.delete(`http://localhost:8080/products/${productId}`);
+            const response = await instance.delete(`http://localhost:8080/products/${productId}`);
 
             if (response.status === 200) {
                 message.success(response.data.message);
@@ -145,7 +145,7 @@ const ProductList = ({ searchQuery, refreshKey, setRefreshKey }) => {
 
     const handleUpdate = async (values) => {
         try {
-            const response = await axios.put(
+            const response = await instance.put(
                 `http://localhost:8080/products/${editingProduct.product_id}`,
                 {
                     name: values.name,
@@ -318,7 +318,7 @@ const ProductList = ({ searchQuery, refreshKey, setRefreshKey }) => {
     );
 
     return (
-        <>
+        <div>
             <Table
                 columns={columns}
                 dataSource={products.map(p => ({ ...p, key: p.product_id }))}
@@ -336,7 +336,7 @@ const ProductList = ({ searchQuery, refreshKey, setRefreshKey }) => {
                 scroll={{ x: 'max-content' }}
             />
             <EditModal />
-        </>
+        </div>
     );
 };
 

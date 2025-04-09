@@ -96,3 +96,21 @@ INSERT INTO `products` (`product_id`, `name`, `description`, `price`, `stock_qua
 INSERT INTO `users` (`user_id`, `username`, `password`, `full_name`, `email`, `phone`, `address`, `role`, `created_at`) VALUES
     (5, 'client1', '$2b$10$6t4NCv12zJhBV7CvDec4OLZrcPc9gze2kf3vW88Ph6Az0gl3STu', 'Nguyen Van A', 'client1@email.com', NULL, NULL, 'client', '2025-03-16 14:33:31'),
     (6, 'admin1', '$2b$10$mVoqoH4228zCK9SEMlNI.aDhZx1Nx9uZa32sdzSEui0Xpt9TQye', 'Tran Thi B', 'admin1@email.com', NULL, NULL, 'admin', '2025-03-16 14:33:31');
+    
+-- Thêm dữ liệu vào bảng orders
+INSERT INTO `orders` (`user_id`, `total_amount`, `status`, `order_date`, `shipping_address`) VALUES
+(5, 398000.00, 'delivered', '2025-03-01 10:00:00', '123 Đường ABC, Quận 1, TP.HCM'),
+(5, 597000.00, 'delivered', '2025-03-15 12:00:00', '123 Đường ABC, Quận 1, TP.HCM'),
+(5, 199000.00, 'delivered', '2025-04-01 15:00:00', '123 Đường ABC, Quận 1, TP.HCM');
+
+-- Thêm dữ liệu vào bảng order_details
+INSERT INTO `order_details` (`order_id`, `product_id`, `quantity`, `price`) VALUES
+(1, 14, 2, 199000.00), -- Đơn hàng 1: 2 sản phẩm (ID 4)
+(2, 15, 3, 199000.00), -- Đơn hàng 2: 3 sản phẩm (ID 5)
+(3, 17, 1, 199000.00); -- Đơn hàng 3: 1 sản phẩm (ID 6)
+
+-- Thêm dữ liệu vào bảng payments
+INSERT INTO `payments` (`order_id`, `amount`, `payment_method`, `payment_status`, `payment_date`) VALUES
+(1, 398000.00, 'card', 'completed', '2025-03-01 10:05:00'),
+(2, 597000.00, 'card', 'completed', '2025-03-15 12:05:00'),
+(3, 199000.00, 'card', 'completed', '2025-04-01 15:05:00');

@@ -1,17 +1,15 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Button, Card, Input, Space, message } from 'antd';
+import { Button, Card, Input, Space, message, Modal } from 'antd';
 import { PlusOutlined, SearchOutlined, ReloadOutlined } from '@ant-design/icons';
 import ProductList from '../components/ProductList';
+import AddProductForm from '../components/AddProductForm';
 
 function ManagerProducts() {
-    const navigate = useNavigate();
     const [searchText, setSearchText] = useState('');
     const [refreshKey, setRefreshKey] = useState(0);
     const [loading, setLoading] = useState(false);
+    const [isModalVisible, setIsModalVisible] = useState(false); // NEW
 
-    const handleAddProduct = () => navigate('/add-product');
-    
     const handleSearch = async () => {
         try {
             setLoading(true);
@@ -24,7 +22,7 @@ function ManagerProducts() {
             setLoading(false);
         }
     };
-    
+
     const handleRefresh = async () => {
         try {
             setLoading(true);
@@ -39,8 +37,14 @@ function ManagerProducts() {
         }
     };
 
+    const handleAddSuccess = () => {
+        message.success('Thêm sản phẩm thành công!');
+        setRefreshKey(prev => prev + 1); // refresh product list
+        setIsModalVisible(false);        // close modal
+    };
+
     return (
-        <div className="p-4">
+        <div>
             <Card
                 title={
                     <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
@@ -65,7 +69,7 @@ function ManagerProducts() {
                             </Button>
                             <Button
                                 type="primary"
-                                onClick={handleAddProduct}
+                                onClick={() => setIsModalVisible(true)} // Mở modal
                                 icon={<PlusOutlined />}
                                 loading={loading}
                             >
@@ -74,7 +78,7 @@ function ManagerProducts() {
                         </Space>
                     </div>
                 }
-                variant='borderless'
+                variant="borderless"
                 className="shadow-sm"
             >
                 <ProductList
@@ -83,6 +87,20 @@ function ManagerProducts() {
                     setRefreshKey={setRefreshKey}
                 />
             </Card>
+
+            {/* Modal chứa form thêm sản phẩm */}
+            <Modal
+                title="Thêm sản phẩm mới"
+                open={isModalVisible}
+                onCancel={() => setIsModalVisible(false)}
+                footer={null}
+                destroyOnClose
+            >
+                <AddProductForm
+                    onSuccess={handleAddSuccess}
+                    onClose={() => setIsModalVisible(false)}
+                />
+            </Modal>
         </div>
     );
 }

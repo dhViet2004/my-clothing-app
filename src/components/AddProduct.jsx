@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import instance from '../api/axiosConfig';
 
 const AddProduct = () => {
   const navigate = useNavigate();
@@ -28,19 +28,16 @@ const AddProduct = () => {
     setError('');
     setSuccess('');
 
-    // Validate required fields
     if (!product.name || !product.price || !product.stock_quantity || !product.category) {
       setError('Vui lòng điền đầy đủ thông tin bắt buộc');
       return;
     }
 
-    // Validate number fields
     if (isNaN(product.price) || isNaN(product.stock_quantity)) {
       setError('Giá và số lượng phải là số');
       return;
     }
 
-    // Convert number fields
     const productData = {
       ...product,
       price: parseFloat(product.price),
@@ -48,85 +45,85 @@ const AddProduct = () => {
     };
 
     try {
-      const response = await axios.post('http://localhost:8080/products', productData);
-      setSuccess('Sản phẩm đã được thêm thành công! Đang chuyển hướng...');
-      
+      await instance.post('http://localhost:8080/products', productData);
+      setSuccess('Sản phẩm đã được thêm thành công!');
+
       setTimeout(() => {
-        navigate('/ManagerProducts');
+        navigate('/admin/managerProducts');
       }, 500);
-      
     } catch (err) {
       console.error('Lỗi khi thêm sản phẩm:', err);
-      setError(err.response?.data?.error || 'Đã xảy ra lỗi khi thêm sản phẩm. Vui lòng thử lại.');
+      setError(err.response?.data?.error || 'Đã xảy ra lỗi khi thêm sản phẩm.');
     }
   };
 
   return (
     <div className="container mx-auto p-4 max-w-md">
       <h1 className="text-2xl font-bold mb-6">Thêm Sản Phẩm Mới</h1>
-      
-      {error && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">{error}</div>}
-      {success && <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">{success}</div>}
+
+      {error && <div className="bg-red-100 text-red-700 p-2 rounded mb-4">{error}</div>}
+      {success && <div className="bg-green-100 text-green-700 p-2 rounded mb-4">{success}</div>}
 
       <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Tên */}
         <div>
-          <label className="block text-sm font-medium text-gray-700">Tên sản phẩm *</label>
+          <label className="block font-medium">Tên sản phẩm *</label>
           <input
             type="text"
             name="name"
             value={product.name}
             onChange={handleChange}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border"
             required
+            className="w-full border p-2 rounded"
           />
         </div>
 
+        {/* Mô tả */}
         <div>
-          <label className="block text-sm font-medium text-gray-700">Mô tả</label>
+          <label className="block font-medium">Mô tả</label>
           <textarea
             name="description"
             value={product.description}
             onChange={handleChange}
             rows={3}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border"
+            className="w-full border p-2 rounded"
           />
         </div>
 
+        {/* Giá */}
         <div>
-          <label className="block text-sm font-medium text-gray-700">Giá *</label>
+          <label className="block font-medium">Giá *</label>
           <input
             type="number"
             name="price"
             value={product.price}
             onChange={handleChange}
-            min="0"
-            step="1000"
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border"
             required
+            className="w-full border p-2 rounded"
           />
         </div>
 
+        {/* Số lượng */}
         <div>
-          <label className="block text-sm font-medium text-gray-700">Số lượng tồn kho *</label>
+          <label className="block font-medium">Số lượng tồn kho *</label>
           <input
             type="number"
             name="stock_quantity"
             value={product.stock_quantity}
             onChange={handleChange}
-            min="0"
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border"
             required
+            className="w-full border p-2 rounded"
           />
         </div>
 
+        {/* Danh mục */}
         <div>
-          <label className="block text-sm font-medium text-gray-700">Danh mục *</label>
+          <label className="block font-medium">Danh mục *</label>
           <select
             name="category"
             value={product.category}
             onChange={handleChange}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border"
-            required
+            className="w-full border p-2 rounded"
           >
             <option value="quan_jean">Quần Jean</option>
             <option value="quan_ao">Quần Áo</option>
@@ -136,31 +133,33 @@ const AddProduct = () => {
           </select>
         </div>
 
+        {/* URL hình ảnh */}
         <div>
-          <label className="block text-sm font-medium text-gray-700">URL hình ảnh</label>
+          <label className="block font-medium">URL hình ảnh</label>
           <input
             type="text"
             name="url"
             value={product.url}
             onChange={handleChange}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border"
             placeholder="/images/image.jpg"
+            className="w-full border p-2 rounded"
           />
         </div>
 
+        {/* Nút hành động */}
         <div className="flex justify-end space-x-3">
           <button
             type="button"
-            onClick={() => navigate('/ManagerProducts')}
-            className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+            onClick={() => navigate('/admin/managerProducts')}
+            className="px-4 py-2 border rounded bg-gray-100 hover:bg-gray-200"
           >
             Hủy
           </button>
           <button
             type="submit"
-            className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
           >
-            Thêm Sản Phẩm
+            Thêm sản phẩm
           </button>
         </div>
       </form>
