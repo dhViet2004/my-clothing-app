@@ -21,50 +21,105 @@ export const DataProvider = ({ children }) => {
   // Hàm fetch dữ liệu từ server
   const fetchStats = async () => {
     try {
+      setStats(prev => ({ ...prev, loading: true, error: null }));
+      console.log('Fetching stats data...');
+
+      // Fetch data from all APIs
       const [turnoverRes, profitRes, customersRes] = await Promise.all([
-        axios.get('/turnover'),
-        axios.get('/profit'),
-        axios.get('/customers'),
+        axios.get('/turnover').catch(error => {
+          console.error('Error fetching turnover:', error.response?.data || error.message);
+          throw error;
+        }),
+        axios.get('/profit').catch(error => {
+          console.error('Error fetching profit:', error.response?.data || error.message);
+          throw error;
+        }),
+        axios.get('/customers').catch(error => {
+          console.error('Error fetching customers:', error.response?.data || error.message);
+          throw error;
+        })
       ]);
 
-      const turnoverData = turnoverRes.data;
-      const profitData = profitRes.data;
-      const customers = customersRes.data.customers || [];
+      console.log('API Responses:', {
+        turnover: turnoverRes.data,
+        profit: profitRes.data,
+        customers: customersRes.data
+      });
 
-      const latestTurnover = turnoverData[turnoverData.length - 1] || { amount: 0, change: 0 };
-      const latestProfit = profitData[profitData.length - 1] || { amount: 0, margin: 0 };
-      const prevProfit = profitData[profitData.length - 2] || latestProfit;
+      // Process turnover data
+      const turnoverData = turnoverRes.data || [];
+      const latestTurnover = turnoverData[0] || { amount: 0, change: 0 };
+      const turnoverDetails = turnoverData.map(item => ({
+        id: item.id || item.month,
+        date: item.date || item.month,
+        amount: parseFloat(item.amount) || 0,
+        current: parseFloat(item.current) || parseFloat(item.amount) || 0,
+        status: item.status || 'Completed',
+        name: item.name || new Date(item.month + '-01').toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
+        orderCount: parseInt(item.orderCount) || 0,
+        change: parseFloat(item.change) || 0
+      }));
 
+      // Process profit data
+      const profitData = profitRes.data || [];
+      const latestProfit = profitData[0] || { amount: 0, change: 0 };
+      const profitDetails = profitData.map(item => ({
+        id: item.id,
+        date: item.date,
+        amount: item.amount,
+        current: item.amount,
+        status: item.status,
+        name: item.name,
+        orderCount: item.orderCount,
+        change: item.change,
+        totalRevenue: item.totalRevenue
+      }));
+
+      // Process customers data
+      const customers = customersRes.data?.customers || [];
       const currentNewCustomers = customers.filter(c => c.status === 'New').length;
       const customerChange = customers.length ? ((currentNewCustomers / customers.length) * 100).toFixed(2) : 0;
+      const customerDetails = customers.map(customer => ({
+        id: customer.user_id,
+        name: customer.full_name,
+        email: customer.email,
+        status: customer.status,
+        date: customer.created_at
+      }));
 
-      setStats({
+      // Update stats state
+      const newStats = {
         turnover: {
           current: latestTurnover.amount,
           change: latestTurnover.change,
-          rawData: turnoverData,
+          details: turnoverDetails
         },
         profit: {
           current: latestProfit.amount,
-          change: prevProfit.margin ? ((latestProfit.margin - prevProfit.margin) / prevProfit.margin * 100).toFixed(2) : 0,
-          rawData: profitData,
+          change: latestProfit.change,
+          details: profitDetails
         },
         newCustomers: {
           current: currentNewCustomers,
           change: customerChange,
-          rawData: customers,
+          details: customerDetails
         },
         loading: false,
-        error: null,
-      });
+        error: null
+      };
 
-      setTableData(customers);
+      console.log('Setting new stats:', newStats);
+      setStats(newStats);
+
+      // Set initial table data
+      setTableData(customerDetails);
+      setTableTitle('New Customers Details');
     } catch (error) {
-      console.error('Fetch error:', error);
+      console.error('Error fetching stats:', error);
       setStats(prev => ({
         ...prev,
         loading: false,
-        error: 'Failed to fetch data',
+        error: 'Failed to fetch statistics data'
       }));
     }
   };
@@ -80,25 +135,113 @@ export const DataProvider = ({ children }) => {
     }).format(value);
   };
 
+  // Function to fetch profit data from server
+  const fetchProfitData = async () => {
+    try {
+      console.log('Fetching profit data...');
+      const response = await axios.get('/profit');
+      const profitData = response.data;
+      console.log('Raw profit data from API:', profitData);
+
+      // Process profit data
+      const profitDetails = profitData.map(item => ({
+        id: item.month,
+        date: item.month,
+        amount: item.amount,
+        current: item.amount,
+        status: 'Completed',
+        name: new Date(item.month + '-01').toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
+        orderCount: item.orderCount,
+        change: item.change,
+        totalRevenue: item.totalRevenue
+      }));
+
+      console.log('Processed profit details:', profitDetails);
+
+      // Update stats with new profit data
+      setStats(prev => ({
+        ...prev,
+        profit: {
+          ...prev.profit,
+          current: profitData[0]?.amount || 0,
+          change: profitData[0]?.change || 0,
+          details: profitDetails
+        },
+        loading: false
+      }));
+
+      // Update table data
+      setTableData(profitDetails);
+      setTableTitle('Profit Details');
+    } catch (error) {
+      console.error('Error fetching profit data:', error);
+      setStats(prev => ({
+        ...prev,
+        loading: false,
+        error: 'Failed to fetch profit data'
+      }));
+    }
+  };
+
   // Hàm xử lý click filter
-  const handleButtonClick = (filterType) => {
-    setActiveFilter(filterType);
-    switch (filterType) {
-      case 'turnover':
-        setTableData(stats.turnover.rawData);
-        setTableTitle('Turnover Details');
-        break;
-      case 'profit':
-        setTableData(stats.profit.rawData);
-        setTableTitle('Profit Details');
-        break;
-      case 'customers':
-        setTableData(stats.newCustomers.rawData);
-        setTableTitle('Customer Details');
-        break;
-      default:
-        setTableData(stats.newCustomers.rawData);
-        setTableTitle('Detailed Report');
+  const handleButtonClick = (type) => {
+    console.log('Button clicked:', type);
+    console.log('Current stats:', stats);
+    
+    setActiveFilter(type);
+    
+    if (type === 'turnover') {
+      setTableData(stats.turnover.details);
+      setTableTitle('Turnover Details');
+    } else if (type === 'profit') {
+      setTableData(stats.profit.details);
+      setTableTitle('Profit Details');
+    } else if (type === 'customers') {
+      setTableData(stats.newCustomers.details);
+      setTableTitle('New Customers Details');
+    }
+  };
+
+  // Function to fetch turnover data from server
+  const fetchTurnoverData = async () => {
+    try {
+      setStats(prev => ({ ...prev, loading: true, error: null }));
+      
+      const response = await axios.get('/turnover');
+      const turnoverData = response.data;
+      
+      // Process turnover data
+      const turnoverDetails = turnoverData.map(item => ({
+        id: item.month,
+        date: item.month,
+        amount: item.amount,
+        current: item.amount,
+        status: 'Completed',
+        name: new Date(item.month + '-01').toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+      }));
+      
+      // Update stats with new turnover data
+      setStats(prev => ({
+        ...prev,
+        turnover: {
+          ...prev.turnover,
+          current: turnoverData[0]?.amount || 0,
+          change: turnoverData[0]?.change || 0,
+          details: turnoverDetails
+        },
+        loading: false
+      }));
+      
+      // Update table data
+      setTableData(turnoverDetails);
+      setTableTitle('Turnover Details');
+    } catch (error) {
+      console.error('Error fetching turnover data:', error);
+      setStats(prev => ({
+        ...prev,
+        loading: false,
+        error: 'Failed to fetch turnover data'
+      }));
     }
   };
 

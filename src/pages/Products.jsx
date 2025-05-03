@@ -44,7 +44,7 @@ function Products() {
                     params: {
                         page: pagination.current,
                         pageSize: pagination.pageSize,
-                        category: filters.category,
+                        category: filters.category || undefined,
                         sort: filters.sort
                     }
                 });
@@ -104,23 +104,28 @@ function Products() {
                     <span className="font-medium">Lọc theo:</span>
                     <Select
                         placeholder="Danh mục"
-                        style={{ width: 180 }}
+                        style={{ width: 200 }}
                         value={filters.category}
                         onChange={(value) => handleFilterChange('category', value)}
                         allowClear
                     >
                         <Option value="">Tất cả</Option>
-                        <Option value="electronics">Điện tử</Option>
-                        <Option value="clothing">Quần áo</Option>
-                        <Option value="books">Sách</Option>
-                        <Option value="home">Đồ gia dụng</Option>
+                        <Option value="dam_vay">Đầm/Váy</Option>
+                        <Option value="quan_jean">Quần Jean</Option>
+                        <Option value="quan_au">Quần Âu</Option>
+                        <Option value="ao_so_mi">Áo Sơ Mi</Option>
+                        <Option value="ao_khoac">Áo Khoác</Option>
+                        <Option value="ao_len">Áo Len</Option>
+                        <Option value="chan_vay">Chân Váy</Option>
+                        <Option value="quan_short">Quần Short</Option>
+                        <Option value="ao_phong">Áo Phông</Option>
                     </Select>
                 </div>
                 
                 <div className="flex items-center gap-4">
                     <span className="font-medium">Sắp xếp:</span>
                     <Select
-                        style={{ width: 180 }}
+                        style={{ width: 200 }}
                         value={filters.sort}
                         onChange={(value) => handleFilterChange('sort', value)}
                     >

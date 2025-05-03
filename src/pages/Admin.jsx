@@ -5,6 +5,8 @@ import Dashboard from './Dashboard';
 import ManagerProducts from './ManagerProducts';
 import Overview from '../components/Overview';
 import AddProduct from '../components/AddProduct';
+import OrderManagement from '../components/admin/OrderManagement';
+
 function Admin() {
   return (
     <DataProvider>
@@ -32,6 +34,7 @@ function Admin() {
               {/* Route khác */}
               <Route path="managerProducts" element={<ManagerProducts />} />
               <Route path="managerProducts/add" element={<AddProduct />} />
+              <Route path="orders" element={<OrderManagement />} />
             </Routes>
           </main>
         </div>

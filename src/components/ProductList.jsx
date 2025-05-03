@@ -234,7 +234,7 @@ const ProductList = ({ searchQuery, refreshKey, setRefreshKey }) => {
     ];
 
     // Edit modal
-    const EditModal = () => (
+    const editModal = (
         <Modal
             title="Edit Product"
             open={editModalOpen}
@@ -245,7 +245,19 @@ const ProductList = ({ searchQuery, refreshKey, setRefreshKey }) => {
             footer={null}
             destroyOnClose
         >
-            <Form form={form} onFinish={handleUpdate} layout="vertical">
+            <Form
+                form={form}
+                layout="vertical"
+                onFinish={handleUpdate}
+                initialValues={{
+                    name: editingProduct?.name || '',
+                    description: editingProduct?.description || '',
+                    price: editingProduct?.price?.toString() || '0',
+                    stock_quantity: editingProduct?.stock_quantity?.toString() || '0',
+                    category: editingProduct?.category || 'quan_jean',
+                    url: editingProduct?.url || ''
+                }}
+            >
                 <Form.Item
                     name="name"
                     label="Product Name"
@@ -253,27 +265,18 @@ const ProductList = ({ searchQuery, refreshKey, setRefreshKey }) => {
                 >
                     <Input />
                 </Form.Item>
+
                 <Form.Item
-                    name="url"
-                    label="Image URL"
-                    rules={[{ type: 'text', message: 'Please enter a valid URL!' }]}
+                    name="description"
+                    label="Description"
                 >
-                    <Input placeholder="/images/image.jpg" />
-                </Form.Item>
-                <Form.Item name="description" label="Description">
-                    <Input.TextArea rows={3} />
+                    <Input.TextArea rows={4} />
                 </Form.Item>
 
                 <Form.Item
                     name="price"
                     label="Price"
-                    rules={[
-                        { required: true, message: 'Please input price!' },
-                        {
-                            validator: (_, value) =>
-                                value && !isNaN(value) ? Promise.resolve() : Promise.reject('Invalid price!')
-                        }
-                    ]}
+                    rules={[{ required: true, message: 'Please input price!' }]}
                 >
                     <Input type="number" min={0} step="0.01" />
                 </Form.Item>
@@ -281,10 +284,7 @@ const ProductList = ({ searchQuery, refreshKey, setRefreshKey }) => {
                 <Form.Item
                     name="stock_quantity"
                     label="Stock Quantity"
-                    rules={[
-                        { required: true, message: 'Please input quantity!' },
-                        { pattern: /^\d+$/, message: 'Must be integer!' },
-                    ]}
+                    rules={[{ required: true, message: 'Please input stock quantity!' }]}
                 >
                     <Input type="number" min={0} step="1" />
                 </Form.Item>
@@ -294,12 +294,19 @@ const ProductList = ({ searchQuery, refreshKey, setRefreshKey }) => {
                     label="Category"
                     rules={[{ required: true, message: 'Please select category!' }]}
                 >
-                    <Select placeholder="Select category">
-                        <Option value="quan_jean">Jeans</Option>
-                        <Option value="quan_ao">Clothing</Option>
-                        <Option value="ao_khoac">Jacket</Option>
-                        <Option value="ao_so_mi">Shirt</Option>
-                        <Option value="ao_len">Sweater</Option>
+                    <Select
+                        placeholder="Danh mục"
+                        style={{ width: '100%' }}
+                    >
+                        <Option value="dam_vay">Đầm/Váy</Option>
+                        <Option value="quan_jean">Quần Jean</Option>
+                        <Option value="quan_au">Quần Âu</Option>
+                        <Option value="ao_so_mi">Áo Sơ Mi</Option>
+                        <Option value="ao_khoac">Áo Khoác</Option>
+                        <Option value="ao_len">Áo Len</Option>
+                        <Option value="chan_vay">Chân Váy</Option>
+                        <Option value="quan_short">Quần Short</Option>
+                        <Option value="ao_phong">Áo Phông</Option>
                     </Select>
                 </Form.Item>
 
@@ -308,7 +315,10 @@ const ProductList = ({ searchQuery, refreshKey, setRefreshKey }) => {
                         <Button type="primary" htmlType="submit" loading={loading}>
                             Update
                         </Button>
-                        <Button onClick={() => setEditModalOpen(false)}>
+                        <Button onClick={() => {
+                            setEditModalOpen(false);
+                            form.resetFields();
+                        }}>
                             Cancel
                         </Button>
                     </Space>
@@ -335,7 +345,7 @@ const ProductList = ({ searchQuery, refreshKey, setRefreshKey }) => {
                 }}
                 scroll={{ x: 'max-content' }}
             />
-            <EditModal />
+            {editModal}
         </div>
     );
 };

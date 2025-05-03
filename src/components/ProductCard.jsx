@@ -2,7 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Card, Tag, Button, Space, Skeleton, message, Rate, Typography } from 'antd';
 import { ShoppingCartOutlined, HeartOutlined, EyeOutlined } from '@ant-design/icons';
 import { useNavigate, useParams } from 'react-router-dom';
-import axios from 'axios';
+import axios from '../api/axiosConfig';
+import { useCart } from './CartContext';
+import { useAuth } from './AuthContext';
 
 const { Meta } = Card;
 const { Text, Paragraph } = Typography;
@@ -16,13 +18,15 @@ const ProductCard = ({
     const [productDetail, setProductDetail] = useState(null);
     const [loading, setLoading] = useState(false);
     const [isFavorite, setIsFavorite] = useState(false);
+    const { addToCart } = useCart();
+    const { user } = useAuth();
 
     useEffect(() => {
         if (isDetailView && id) {
             const fetchProductDetail = async () => {
                 setLoading(true);
                 try {
-                    const response = await axios.get(`http://localhost:8080/products/${id}`);
+                    const response = await axios.get(`/products/${id}`);
                     setProductDetail(response.data);
                 } catch (error) {
                     message.error('Lỗi khi tải chi tiết sản phẩm');
@@ -38,11 +42,17 @@ const ProductCard = ({
 
     const handleAddToCart = (e) => {
         e?.stopPropagation();
+        const productToAdd = isDetailView ? productDetail : product;
+        addToCart(productToAdd);
         message.success('Đã thêm vào giỏ hàng');
     };
 
     const toggleFavorite = (e) => {
         e?.stopPropagation();
+        if (!user) {
+            message.warning('Vui lòng đăng nhập để thêm vào yêu thích');
+            return;
+        }
         setIsFavorite(!isFavorite);
         message.success(!isFavorite ? 'Đã thêm vào yêu thích' : 'Đã bỏ khỏi yêu thích');
     };
@@ -79,6 +89,22 @@ const ProductCard = ({
         cursor: !isDetailView ? 'pointer' : 'default',
         transition: 'transform 0.3s',
         width: '100%'
+    };
+
+    const getCategoryName = (category) => {
+        const categoryNames = {
+            'dam_vay': 'Đầm/Váy',
+            'quan_jean': 'Quần Jean',
+            'quan_au': 'Quần Âu',
+            'ao_so_mi': 'Áo Sơ Mi',
+            'ao_khoac': 'Áo Khoác',
+            'ao_len': 'Áo Len',
+            'chan_vay': 'Chân Váy',
+            'quan_short': 'Quần Short',
+            'ao_phong': 'Áo Phông',
+            'tuan_ao': 'Tuần Áo'
+        };
+        return categoryNames[category] || category;
     };
 
     return (
@@ -132,7 +158,7 @@ const ProductCard = ({
                             />
                             
                             <Tag color="blue" style={{ marginRight: 0 }}>
-                                {currentProduct.category}
+                                {getCategoryName(currentProduct.category)}
                             </Tag>
                             
                             <Text strong style={{ fontSize: isDetailView ? '20px' : '16px', color: '#ff4d4f' }}>

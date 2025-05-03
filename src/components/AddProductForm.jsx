@@ -8,7 +8,7 @@ const AddProductForm = ({ onSuccess, onClose }) => {
     description: '',
     price: '',
     stock_quantity: '',
-    category: 'quan_jean',
+    category: 'dam_vay',
     url: ''
   });
   const [error, setError] = useState('');
@@ -24,23 +24,42 @@ const AddProductForm = ({ onSuccess, onClose }) => {
     setError('');
     setIsSubmitting(true);
 
-    if (!product.name || !product.price || !product.stock_quantity) {
+    // Validate required fields
+    if (!product.name || !product.price || !product.stock_quantity || !product.category) {
       setError('Vui lòng nhập đủ thông tin bắt buộc');
       setIsSubmitting(false);
       return;
     }
 
+    // Validate price and stock_quantity
+    if (isNaN(parseFloat(product.price)) || parseFloat(product.price) <= 0) {
+      setError('Giá sản phẩm không hợp lệ');
+      setIsSubmitting(false);
+      return;
+    }
+
+    if (isNaN(parseInt(product.stock_quantity)) || parseInt(product.stock_quantity) < 0) {
+      setError('Số lượng sản phẩm không hợp lệ');
+      setIsSubmitting(false);
+      return;
+    }
+
     try {
-      await instance.post('/products', {
+      console.log('Submitting product:', product);
+      const response = await instance.post('/products', {
         ...product,
         price: parseFloat(product.price),
         stock_quantity: parseInt(product.stock_quantity)
       });
 
+      console.log('Response:', response.data);
       onSuccess();
       onClose();
     } catch (err) {
-      setError(err.response?.data?.error || 'Lỗi khi thêm sản phẩm');
+      console.error('Error submitting product:', err);
+      const errorMessage = err.response?.data?.error || 'Lỗi khi thêm sản phẩm';
+      const errorDetails = err.response?.data?.details;
+      setError(errorDetails ? `${errorMessage}: ${JSON.stringify(errorDetails)}` : errorMessage);
     } finally {
       setIsSubmitting(false);
     }
@@ -139,13 +158,15 @@ const AddProductForm = ({ onSuccess, onClose }) => {
             onChange={handleChange}
             className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent focus:outline-none appearance-none bg-white"
           >
-            <option value="quan_jean">Quần Jean</option>
-            <option value="quan_ao">Quần Áo</option>
-            <option value="ao_khoac">Áo Khoác</option>
-            <option value="ao_so_mi">Áo Sơ Mi</option>
-            <option value="ao_len">Áo Len</option>
             <option value="dam_vay">Đầm/Váy</option>
-            <option value="chan_vay">Chân váy</option>
+            <option value="quan_jean">Quần Jean</option>
+            <option value="quan_au">Quần Âu</option>
+            <option value="ao_so_mi">Áo Sơ Mi</option>
+            <option value="ao_khoac">Áo Khoác</option>
+            <option value="ao_len">Áo Len</option>
+            <option value="chan_vay">Chân Váy</option>
+            <option value="quan_short">Quần Short</option>
+            <option value="ao_phong">Áo Phông</option>
           </select>
         </div>
 

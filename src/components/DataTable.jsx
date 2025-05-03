@@ -21,15 +21,24 @@ const DataTable = ({
   // Fetch dữ liệu nếu tableData rỗng
   useEffect(() => {
     if (!tableData || tableData.length === 0) {
+      console.log('Table data is empty, fetching stats...');
       fetchStats();
     }
   }, [tableData, fetchStats]);
 
+  // Log khi activeFilter thay đổi
+  useEffect(() => {
+    console.log('Active filter changed:', activeFilter);
+    console.log('Current table data:', tableData);
+  }, [activeFilter, tableData]);
+
   // Sử dụng useMemo để tính toán currentItems
   const currentItems = useMemo(() => {
     if (!tableData || tableData.length === 0) {
+      console.log('No table data available');
       return [];
     }
+    console.log('Calculating current items from table data:', tableData);
     const indexOfLastItem = currentPage * itemsPerPage;
     const indexOfFirstItem = indexOfLastItem - itemsPerPage;
     return tableData.slice(indexOfFirstItem, indexOfLastItem);
@@ -42,12 +51,15 @@ const DataTable = ({
 
   // Kiểm tra điều kiện trả về sớm
   if (!tableData || tableData.length === 0) {
+    console.log('Rendering empty state');
     return <div className="p-4">No data available</div>;
   }
 
   const columns = Object.keys(tableData[0]).filter(
     column => !excludeFields.includes(column)
   );
+
+  console.log('Columns to display:', columns);
 
   const formatCurrency = (value) => {
     if (isNaN(value)) return value;
@@ -98,19 +110,6 @@ const DataTable = ({
     if (column === nameField) {
       return (
         <div className="flex items-center">
-          {item[avatarField] && (
-            <div className="flex-shrink-0 h-10 w-10 mr-3">
-              <img
-                className="h-10 w-10 rounded-full object-cover"
-                src={`http://localhost:3001${item[avatarField]}`}
-                alt="Avatar"
-                onError={(e) => {
-                  e.target.onerror = null;
-                  e.target.src = '/default-avatar.png';
-                }}
-              />
-            </div>
-          )}
           <div>{value}</div>
         </div>
       );
@@ -132,11 +131,41 @@ const DataTable = ({
   };
 
   const formatColumnName = (column) => {
-    return column
-      .replace(/([A-Z])/g, ' $1')
-      .replace(/_/g, ' ')
-      .replace(/^./, str => str.toUpperCase())
-      .trim();
+    // Custom column names based on active filter
+    if (activeFilter === 'turnover' || activeFilter === 'profit') {
+      switch (column) {
+        case 'id':
+          return 'ID';
+        case 'date':
+          return 'Date';
+        case 'amount':
+          return activeFilter === 'turnover' ? 'Revenue' : 'Profit';
+        case 'current':
+          return 'Current Amount';
+        case 'status':
+          return 'Status';
+        case 'name':
+          return 'Month';
+        default:
+          return column;
+      }
+    } else if (activeFilter === 'customers') {
+      switch (column) {
+        case 'id':
+          return 'ID';
+        case 'name':
+          return 'Name';
+        case 'email':
+          return 'Email';
+        case 'status':
+          return 'Status';
+        case 'date':
+          return 'Join Date';
+        default:
+          return column;
+      }
+    }
+    return column;
   };
 
   const handleEditClick = (item) => {

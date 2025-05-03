@@ -125,11 +125,15 @@ const AddProduct = () => {
             onChange={handleChange}
             className="w-full border p-2 rounded"
           >
+            <option value="dam_vay">Đầm/Váy</option>
             <option value="quan_jean">Quần Jean</option>
-            <option value="quan_ao">Quần Áo</option>
-            <option value="ao_khoac">Áo Khoác</option>
+            <option value="quan_au">Quần Âu</option>
             <option value="ao_so_mi">Áo Sơ Mi</option>
+            <option value="ao_khoac">Áo Khoác</option>
             <option value="ao_len">Áo Len</option>
+            <option value="chan_vay">Chân Váy</option>
+            <option value="quan_short">Quần Short</option>
+            <option value="ao_phong">Áo Phông</option>
           </select>
         </div>
 

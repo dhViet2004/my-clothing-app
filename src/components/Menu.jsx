@@ -7,7 +7,8 @@ import {
   FiPieChart,
   FiMessageSquare,
   FiCode,
-  FiArrowUpRight
+  FiArrowUpRight,
+  FiShoppingBag
 } from 'react-icons/fi'
 
 function Menu() {
@@ -44,40 +45,14 @@ function Menu() {
         </li>
         <li>
           <Link
-            to="/admin/Teams"
+            to="/admin/orders"
             className='flex items-center gap-3 border border-gray-300 rounded-lg px-4 py-3 bg-white text-black hover:bg-pink-400 hover:text-white transition-colors'
           >
-            <FiUsers className='w-5 h-5' />
-            Teams
+            <FiShoppingBag className='w-5 h-5' />
+            Orders
           </Link>
         </li>
-        <li>
-          <Link
-            to="/admin/Analytics"
-            className='flex items-center gap-3 border border-gray-300 rounded-lg px-4 py-3 bg-white text-black hover:bg-pink-400 hover:text-white transition-colors'
-          >
-            <FiPieChart className='w-5 h-5' />
-            Analytics
-          </Link>
-        </li>
-        <li>
-          <Link
-            to="/admin/Messages"
-            className='flex items-center gap-3 border border-gray-300 rounded-lg px-4 py-3 bg-white text-black hover:bg-pink-400 hover:text-white transition-colors'
-          >
-            <FiMessageSquare className='w-5 h-5' />
-            Messages
-          </Link>
-        </li>
-        <li>
-          <Link
-            to="/admin/Integrations"
-            className='flex items-center gap-3 border border-gray-300 rounded-lg px-4 py-3 bg-white text-black hover:bg-pink-400 hover:text-white transition-colors'
-          >
-            <FiCode className='w-5 h-5' />
-            Integrations
-          </Link>
-        </li>
+        
       </ul>
 
       <div className='w-full p-3 bg-blue-100 mt-10 rounded-lg grid place-items-center'>
