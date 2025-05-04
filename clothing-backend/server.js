@@ -361,13 +361,43 @@ app.put('/products/:id', authenticateJWT('admin'), async (req, res) => {
 app.delete('/products/:id', authenticateJWT('admin'), async (req, res) => {
     try {
         const productId = req.params.id;
+        console.log('Attempting to delete product:', productId);
 
+        // Check if product exists
+        const [product] = await pool.query(
+            'SELECT * FROM products WHERE product_id = ?',
+            [productId]
+        );
+
+        if (product.length === 0) {
+            console.log('Product not found:', productId);
+            return res.status(404).json({ error: 'Không tìm thấy sản phẩm' });
+        }
+
+        // Check if product is referenced in order_details
+        const [orderDetails] = await pool.query(
+            'SELECT * FROM order_details WHERE product_id = ?',
+            [productId]
+        );
+
+        if (orderDetails.length > 0) {
+            console.log('Product is referenced in orders:', productId);
+            return res.status(400).json({ 
+                error: 'Không thể xóa sản phẩm vì đã có đơn hàng liên quan',
+                details: 'Sản phẩm này đã được sử dụng trong các đơn hàng'
+            });
+        }
+
+        // Delete the product
         const [result] = await pool.query(
             'DELETE FROM products WHERE product_id = ?',
             [productId]
         );
 
+        console.log('Delete result:', result);
+
         if (result.affectedRows === 0) {
+            console.log('No rows affected when deleting product:', productId);
             return res.status(404).json({ error: 'Không tìm thấy sản phẩm' });
         }
 
@@ -376,8 +406,16 @@ app.delete('/products/:id', authenticateJWT('admin'), async (req, res) => {
             productId: parseInt(productId)
         });
     } catch (err) {
-        console.error('Lỗi xóa sản phẩm:', err);
-        res.status(500).json({ error: 'Lỗi server khi xóa sản phẩm' });
+        console.error('Detailed error in delete product:', {
+            message: err.message,
+            stack: err.stack,
+            code: err.code,
+            sqlMessage: err.sqlMessage
+        });
+        res.status(500).json({ 
+            error: 'Lỗi server khi xóa sản phẩm',
+            details: err.message
+        });
     }
 });
 

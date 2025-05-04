@@ -111,10 +111,23 @@ const ProductList = ({ searchQuery, refreshKey, setRefreshKey }) => {
         } catch (error) {
             console.error('Delete error details:', error);
             if (error.response) {
-                if (error.response.status === 404) {
+                const errorMessage = error.response.data?.error || 'Xóa thất bại';
+                const errorDetails = error.response.data?.details;
+                
+                if (error.response.status === 400) {
+                    message.error({
+                        content: errorMessage,
+                        description: errorDetails,
+                        duration: 5
+                    });
+                } else if (error.response.status === 404) {
                     message.error('Không tìm thấy sản phẩm để xóa');
                 } else {
-                    message.error(error.response.data?.error || 'Xóa thất bại');
+                    message.error({
+                        content: errorMessage,
+                        description: errorDetails || 'Vui lòng thử lại sau',
+                        duration: 5
+                    });
                 }
             } else {
                 message.error('Lỗi kết nối đến server');
