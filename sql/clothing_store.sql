@@ -1,22 +1,19 @@
 -- --------------------------------------------------------
 -- Host:                         127.0.0.1
--- Server version:               11.6.2-MariaDB - mariadb.org binary distribution
+-- Server version:               MySQL 8.0
 -- Server OS:                    Win64
--- HeidiSQL Version:             12.8.0.6908
 -- --------------------------------------------------------
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
-/*!40101 SET NAMES utf8 */;
-/*!50503 SET NAMES utf8mb4 */;
+/*!40101 SET NAMES utf8mb4 */;
 /*!40103 SET @OLD_TIME_ZONE=@@TIME_ZONE */;
 /*!40103 SET TIME_ZONE='+00:00' */;
 /*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
 /*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
-
 -- Dumping database structure for clothing_store
-CREATE DATABASE IF NOT EXISTS `clothing_store` /*!40100 DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_uca1400_ai_ci */;
+CREATE DATABASE IF NOT EXISTS `clothing_store` /*!40100 DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci */;
 USE `clothing_store`;
 
 -- Dumping structure for table clothing_store.cart
@@ -25,7 +22,7 @@ CREATE TABLE IF NOT EXISTS `cart` (
   `user_id` int(11) NOT NULL,
   `product_id` int(11) NOT NULL,
   `quantity` int(11) NOT NULL,
-  `added_at` timestamp NULL DEFAULT current_timestamp(),
+  `added_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`cart_id`),
   KEY `user_id` (`user_id`),
   KEY `product_id` (`product_id`),
@@ -33,7 +30,7 @@ CREATE TABLE IF NOT EXISTS `cart` (
   CONSTRAINT `cart_ibfk_2` FOREIGN KEY (`product_id`) REFERENCES `products` (`product_id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=208 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Dumping data for table clothing_store.cart: ~1 rows (approximately)
+-- Dumping data for table clothing_store.cart
 INSERT INTO `cart` (`cart_id`, `user_id`, `product_id`, `quantity`, `added_at`) VALUES
 	(129, 3, 2, 1, '2025-04-27 05:35:53');
 
@@ -43,14 +40,14 @@ CREATE TABLE IF NOT EXISTS `orders` (
   `user_id` int(11) NOT NULL,
   `total_amount` decimal(10,2) NOT NULL,
   `status` enum('pending','processing','shipped','delivered','cancelled') DEFAULT 'pending',
-  `order_date` timestamp NULL DEFAULT current_timestamp(),
+  `order_date` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `shipping_address` text NOT NULL,
   PRIMARY KEY (`order_id`),
   KEY `user_id` (`user_id`),
   CONSTRAINT `orders_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=27 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Dumping data for table clothing_store.orders: ~26 rows (approximately)
+-- Dumping data for table clothing_store.orders
 INSERT INTO `orders` (`order_id`, `user_id`, `total_amount`, `status`, `order_date`, `shipping_address`) VALUES
 	(1, 2, 299000.00, 'delivered', '2025-04-26 07:18:24', 'Default address'),
 	(2, 2, 80000.00, 'delivered', '2025-04-26 07:29:55', 'Chưa cập nhật địa chỉ'),
@@ -93,7 +90,7 @@ CREATE TABLE IF NOT EXISTS `order_details` (
   CONSTRAINT `order_details_ibfk_2` FOREIGN KEY (`product_id`) REFERENCES `products` (`product_id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=41 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Dumping data for table clothing_store.order_details: ~40 rows (approximately)
+-- Dumping data for table clothing_store.order_details
 INSERT INTO `order_details` (`order_detail_id`, `order_id`, `product_id`, `quantity`, `price`) VALUES
 	(1, 1, 2, 1, 299000.00),
 	(2, 2, 3, 1, 80000.00),
@@ -144,13 +141,13 @@ CREATE TABLE IF NOT EXISTS `payments` (
   `payment_method` enum('cash','card','bank_transfer') NOT NULL,
   `payment_status` enum('pending','completed','failed') DEFAULT 'pending',
   `transaction_id` varchar(100) DEFAULT NULL,
-  `payment_date` timestamp NULL DEFAULT current_timestamp(),
+  `payment_date` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`payment_id`),
   KEY `order_id` (`order_id`),
   CONSTRAINT `payments_ibfk_1` FOREIGN KEY (`order_id`) REFERENCES `orders` (`order_id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=27 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Dumping data for table clothing_store.payments: ~26 rows (approximately)
+-- Dumping data for table clothing_store.payments
 INSERT INTO `payments` (`payment_id`, `order_id`, `amount`, `payment_method`, `payment_status`, `transaction_id`, `payment_date`) VALUES
 	(1, 1, 299000.00, 'cash', 'completed', NULL, '2025-04-26 07:18:24'),
 	(2, 2, 80000.00, 'cash', 'completed', NULL, '2025-04-26 07:29:55'),
@@ -188,12 +185,12 @@ CREATE TABLE IF NOT EXISTS `products` (
   `stock_quantity` int(11) NOT NULL DEFAULT 0,
   `category` enum('dam_vay','quan_jean','quan_au','ao_so_mi','ao_khoac','ao_len','chan_vay','quan_short','ao_phong') NOT NULL,
   `url` varchar(255) DEFAULT NULL,
-  `created_at` timestamp NULL DEFAULT current_timestamp(),
-  `updated_at` timestamp NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`product_id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=12 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Dumping data for table clothing_store.products: ~10 rows (approximately)
+-- Dumping data for table clothing_store.products
 INSERT INTO `products` (`product_id`, `name`, `description`, `price`, `stock_quantity`, `category`, `url`, `created_at`, `updated_at`) VALUES
 	(2, 'Váy Hỡ Vai', 'size 39', 299000.00, 20, 'dam_vay', '/images/VayNgan-Den.jpg', '2025-04-26 07:08:55', '2025-04-26 09:08:12'),
 	(3, 'Áo trắng', 'size 37', 80000.00, 20, 'ao_len', '/images/Ao-Trang.jpg', '2025-04-26 07:10:06', '2025-04-26 07:10:06'),
@@ -216,14 +213,14 @@ CREATE TABLE IF NOT EXISTS `users` (
   `phone` varchar(15) DEFAULT NULL,
   `address` text DEFAULT NULL,
   `role` enum('client','admin') DEFAULT 'client',
-  `created_at` timestamp NULL DEFAULT current_timestamp(),
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `avatar` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`user_id`),
   UNIQUE KEY `username` (`username`),
   UNIQUE KEY `email` (`email`)
 ) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Dumping data for table clothing_store.users: ~5 rows (approximately)
+-- Dumping data for table clothing_store.users
 INSERT INTO `users` (`user_id`, `username`, `password`, `full_name`, `email`, `phone`, `address`, `role`, `created_at`, `avatar`) VALUES
 	(1, 'admin', '$2b$10$JK.YYxHap.cw8Ay7HncBRuHmp7Be87CABSl9pH2TvNZW4jSSfQRJa', 'Đặng Hoàng Việt', 'dviet037@gmail.com', NULL, NULL, 'admin', '2025-04-26 06:05:54', NULL),
 	(2, 'user', '$2b$10$.a0zOv7Pc3mVWaYOhW5Ofe2c6CpbsrY71tzJd648Jg535EnwNk2q6', 'Nguyễn Thị Mỹ Nhân', 'nguyenthien110120@gmail.com', NULL, NULL, 'client', '2025-04-26 07:18:10', NULL),
