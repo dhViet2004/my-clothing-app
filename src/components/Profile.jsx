@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Tabs, Card, List, Typography, Space, Tag, Button, Empty, message, InputNumber, Steps, Table, Descriptions, Modal, Form, Input } from 'antd';
-import { ShoppingCartOutlined, HistoryOutlined, EyeOutlined, CheckCircleOutlined, ClockCircleOutlined, CarOutlined, CloseCircleOutlined, DollarOutlined, UserOutlined } from '@ant-design/icons';
+import { ShoppingCartOutlined, HistoryOutlined, EyeOutlined, CheckCircleOutlined, ClockCircleOutlined, CarOutlined, CloseCircleOutlined, DollarOutlined, UserOutlined, PrinterOutlined } from '@ant-design/icons';
 import { useCart } from './CartContext';
 import { useAuth } from './AuthContext';
 import PaymentMethod from './PaymentMethod';
 import axios from 'axios';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 const { Title, Text } = Typography;
 
@@ -196,11 +198,11 @@ const Profile = () => {
 
     const getOrderStatusText = (status) => {
         const statusTexts = {
-            pending: 'Chờ xử lý',
-            processing: 'Đang xử lý',
-            shipped: 'Đang giao hàng',
-            delivered: 'Đã giao hàng',
-            cancelled: 'Đã hủy'
+            pending: 'Cho xu ly',
+            processing: 'Dang xu ly',
+            shipped: 'Dang giao hang',
+            delivered: 'Da giao hang',
+            cancelled: 'Da huy'
         };
         return statusTexts[status] || status;
     };
@@ -232,18 +234,107 @@ const Profile = () => {
         await fetchOrderDetails(order.order_id);
     };
 
+    // Hàm xóa dấu tiếng Việt
+    const removeVietnameseTones = (str) => {
+        return str
+            .normalize('NFD')
+            .replace(/\p{Diacritic}/gu, '')
+            .replace(/đ/g, 'd')
+            .replace(/Đ/g, 'D');
+    };
+
     const OrderDetailModal = ({ order, details, visible, onClose }) => {
         if (!order) return null;
 
         const getPaymentMethodText = (method) => {
             switch (method) {
                 case 'cash':
-                    return 'Tiền mặt';
+                    return 'Tien mat';
                 case 'bank_transfer':
-                    return 'Chuyển khoản';
+                    return 'Chuyen khoan';
                 default:
                     return method;
             }
+        };
+
+        const generatePDF = () => {
+            const doc = new jsPDF();
+            
+            // Add company logo/header
+            doc.setFontSize(20);
+            doc.text('HOA DON BAN HANG', 105, 20, { align: 'center' });
+            
+            // Add company information
+            doc.setFontSize(10);
+            doc.text('CUA HANG THOI TRANG', 105, 30, { align: 'center' });
+            doc.text('Dia chi: 123 Duong ABC, Quan XYZ, TP. HCM', 105, 35, { align: 'center' });
+            doc.text('SDT: 0123 456 789', 105, 40, { align: 'center' });
+            
+            // Add buyer information
+            doc.setFontSize(12);
+            doc.text('THONG TIN KHACH HANG', 20, 55);
+            doc.setFontSize(10);
+            doc.text(`Ho va ten: ${user?.full_name || 'N/A'}`, 20, 62);
+            doc.text(`Email: ${user?.email || 'N/A'}`, 20, 68);
+            doc.text(`So dien thoai: ${user?.phone || 'N/A'}`, 20, 74);
+            
+            // Add order information
+            doc.setFontSize(12);
+            doc.text('THONG TIN DON HANG', 20, 85);
+            doc.setFontSize(10);
+            doc.text(`Ma don hang: #${order.order_id}`, 20, 92);
+            doc.text(`Ngay dat: ${new Date(order.order_date).toLocaleDateString('vi-VN')}`, 20, 98);
+            doc.text(`Trang thai: ${getOrderStatusText(order.status)}`, 20, 104);
+            doc.text(`Dia chi giao hang: ${order.shipping_address}`, 20, 110);
+            doc.text(`Phuong thuc thanh toan: ${getPaymentMethodText(details[0]?.payment_method)}`, 20, 116);
+            doc.text(`Trang thai thanh toan: ${details[0]?.payment_status === 'completed' ? 'Da thanh toan' : 'Cho thanh toan'}`, 20, 122);
+
+            // Add products table
+            const tableColumn = ['STT', 'San pham', 'So luong', 'Don gia', 'Thanh tien'];
+            const tableRows = details.map((item, index) => [
+                index + 1,
+                removeVietnameseTones(item.name),
+                item.quantity,
+                new Intl.NumberFormat('vi-VN', { style: 'decimal' }).format(item.price) + ' Đ',
+                new Intl.NumberFormat('vi-VN', { style: 'decimal' }).format(item.price * item.quantity) + ' Đ'
+            ]);
+
+            autoTable(doc, {
+                head: [tableColumn],
+                body: tableRows,
+                startY: 130,
+                theme: 'grid',
+                styles: { fontSize: 10, cellPadding: 5 },
+                headStyles: { fillColor: [41, 128, 185], textColor: 255 },
+                tableWidth: 'auto',
+                columnStyles: {
+                    0: { cellWidth: 20 },
+                    1: { cellWidth: 50 },
+                    2: { cellWidth: 30 },
+                    3: { cellWidth: 40 },
+                    4: { cellWidth: 40 }
+                }
+            });
+
+            // Add total amount
+            const finalY = doc.lastAutoTable.finalY || 150;
+            doc.setFontSize(12);
+            doc.text(
+                `Tong tien: ${new Intl.NumberFormat('vi-VN', { style: 'decimal' }).format(order.total_amount)} Đ`,
+                20,
+                finalY + 20
+            );
+
+            // Add footer
+            doc.setFontSize(10);
+            doc.text('Cam on quy khach da su dung dich vu cua chung toi!', 105, finalY + 40, { align: 'center' });
+            
+            // Add signature line
+            doc.text('Chu ky nguoi ban', 40, finalY + 60);
+            doc.text('Chu ky nguoi mua', 140, finalY + 60);
+            
+            // Save the PDF
+            doc.save(`invoice-${order.order_id}.pdf`);
         };
 
         return (
@@ -251,7 +342,14 @@ const Profile = () => {
                 title={`Chi tiết đơn hàng #${order.order_id}`}
                 open={visible}
                 onCancel={onClose}
-                footer={null}
+                footer={[
+                    <Button key="print" type="primary" icon={<PrinterOutlined />} onClick={generatePDF}>
+                        In hóa đơn
+                    </Button>,
+                    <Button key="close" onClick={onClose}>
+                        Đóng
+                    </Button>
+                ]}
                 width={800}
             >
                 <Space direction="vertical" size="large" style={{ width: '100%' }}>
