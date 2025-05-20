@@ -30,7 +30,9 @@ const Checkout = () => {
                 order_details: cartItems.map(item => ({
                     product_id: item.product_id,
                     quantity: item.quantity,
-                    price: item.price
+                    price: item.price,
+                    name: item.name,
+                    url: item.url
                 })),
                 payment: {
                     amount: getCartTotal(),
@@ -49,7 +51,7 @@ const Checkout = () => {
             });
 
             if (response.data.success) {
-                message.success('Đặt hàng thành công!');
+                message.success('Đặt hàng thành công! Hóa đơn đã được gửi về email của bạn.');
                 
                 // Clear cart after successful order
                 await clearCart();

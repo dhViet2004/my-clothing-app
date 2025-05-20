@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from './AuthContext';
-import { message } from 'antd';
+import { message, Modal, Input } from 'antd';
 import { GoogleLogin } from '@react-oauth/google';
 import { FcGoogle } from 'react-icons/fc';
 import axios from 'axios';
@@ -17,11 +17,78 @@ const AuthForm = () => {
     full_name: '',
     role: 'client' // Default role for new registrations
   });
+  const [showOtpModal, setShowOtpModal] = useState(false);
+  const [otp, setOtp] = useState('');
+  const [isSendingOtp, setIsSendingOtp] = useState(false);
+  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
+  const [receivedOtp, setReceivedOtp] = useState('');
 
   const [signinData, setSigninData] = useState({
     username: '',
     password: '',
   });
+
+  const handleSendOtp = async () => {
+    try {
+        setIsSendingOtp(true);
+        console.log('Sending OTP request for email:', signupData.email);
+        
+        const response = await axios.post('http://localhost:8080/send-otp', {
+            email: signupData.email
+        });
+
+        console.log('OTP response:', response.data);
+
+        if (response.data.success) {
+            message.success('OTP đã được gửi đến email của bạn');
+            setShowOtpModal(true);
+            setReceivedOtp(response.data.otp); // Lưu OTP nhận được (chỉ dùng cho development)
+        } else {
+            message.error(response.data.error || 'Lỗi gửi OTP');
+        }
+    } catch (err) {
+        console.error('Lỗi gửi OTP:', err);
+        if (err.response) {
+            console.error('Server response:', err.response.data);
+            const errorMessage = err.response.data.error || 'Lỗi gửi OTP';
+            message.error(errorMessage);
+            
+            // If it's an EmailJS error, show a more specific message
+            if (errorMessage.includes('EmailJS')) {
+                message.error('Không thể gửi email xác thực. Vui lòng thử lại sau.');
+            }
+        } else if (err.request) {
+            console.error('No response received:', err.request);
+            message.error('Không nhận được phản hồi từ máy chủ');
+        } else {
+            console.error('Error setting up request:', err.message);
+            message.error('Lỗi kết nối máy chủ');
+        }
+    } finally {
+        setIsSendingOtp(false);
+    }
+  };
+
+  const handleVerifyOtp = async () => {
+    try {
+      setIsVerifyingOtp(true);
+      
+      // Verify OTP (trong môi trường development)
+      if (otp === receivedOtp) {
+        message.success('Xác thực OTP thành công');
+        setShowOtpModal(false);
+        // Proceed with registration
+        await handleSignUp();
+      } else {
+        message.error('Mã OTP không đúng');
+      }
+    } catch (err) {
+      console.error('Lỗi xác thực OTP:', err);
+      message.error('Lỗi kết nối máy chủ');
+    } finally {
+      setIsVerifyingOtp(false);
+    }
+  };
 
   const handleSignUp = async () => {
     try {
@@ -122,7 +189,7 @@ const AuthForm = () => {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (rightPanelActive) {
-      handleSignUp();
+      handleSendOtp(); // Send OTP first instead of direct registration
     } else {
       handleSignIn();
     }
@@ -170,9 +237,10 @@ const AuthForm = () => {
 
             <button
               type="submit"
-              className="rounded-full border border-gray-700 bg-gray-700 text-white text-xs font-medium py-3 px-11 my-3 uppercase tracking-wider transition-all duration-300 hover:bg-gray-800 active:scale-95 focus:outline-none hover:cursor-pointer"
+              disabled={isSendingOtp}
+              className="rounded-full border border-gray-700 bg-gray-700 text-white text-xs font-medium py-3 px-11 my-3 uppercase tracking-wider transition-all duration-300 hover:bg-gray-800 active:scale-95 focus:outline-none hover:cursor-pointer disabled:opacity-50"
             >
-              Đăng ký
+              {isSendingOtp ? 'Đang gửi OTP...' : 'Đăng ký'}
             </button>
           </form>
         </div>
@@ -211,27 +279,28 @@ const AuthForm = () => {
             </div>
 
             <div className="w-full flex justify-center">
-              <GoogleLogin
-                onSuccess={handleGoogleSuccess}
-                onError={handleGoogleError}
-                useOneTap
-                theme="filled_blue"
-                shape="rectangular"
-                text="signin_with"
-                locale="vi"
-                width="100%"
-                flow="implicit"
-                render={renderProps => (
-                  <button
-                    onClick={renderProps.onClick}
-                    disabled={renderProps.disabled}
-                    className="w-full flex items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
-                  >
-                    <FcGoogle className="text-xl" />
-                    <span>Đăng nhập với Google</span>
-                  </button>
-                )}
-              />
+              <div className="w-[300px]">
+                <GoogleLogin
+                  onSuccess={handleGoogleSuccess}
+                  onError={handleGoogleError}
+                  useOneTap
+                  theme="filled_blue"
+                  shape="rectangular"
+                  text="signin_with"
+                  locale="vi"
+                  flow="implicit"
+                  render={renderProps => (
+                    <button
+                      onClick={renderProps.onClick}
+                      disabled={renderProps.disabled}
+                      className="w-full flex items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+                    >
+                      <FcGoogle className="text-xl" />
+                      <span>Đăng nhập với Google</span>
+                    </button>
+                  )}
+                />
+              </div>
             </div>
           </form>
         </div>
@@ -266,6 +335,41 @@ const AuthForm = () => {
             </div>
           </div>
         </div>
+
+        {/* OTP Verification Modal */}
+        <Modal
+          title="Xác thực Email"
+          open={showOtpModal}
+          onCancel={() => setShowOtpModal(false)}
+          footer={[
+            <button
+              key="cancel"
+              onClick={() => setShowOtpModal(false)}
+              className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors"
+            >
+              Hủy
+            </button>,
+            <button
+              key="verify"
+              onClick={handleVerifyOtp}
+              disabled={isVerifyingOtp}
+              className="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50 ml-2"
+            >
+              {isVerifyingOtp ? 'Đang xác thực...' : 'Xác thực'}
+            </button>
+          ]}
+        >
+          <div className="py-4">
+            <p className="mb-4">Vui lòng nhập mã OTP đã được gửi đến email của bạn:</p>
+            <Input
+              value={otp}
+              onChange={(e) => setOtp(e.target.value)}
+              placeholder="Nhập mã OTP"
+              maxLength={6}
+              className="w-full"
+            />
+          </div>
+        </Modal>
       </div>
     </div>
   );

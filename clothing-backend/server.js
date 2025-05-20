@@ -5,6 +5,7 @@ import cors from 'cors';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 import { OAuth2Client } from 'google-auth-library';
+import fetch from 'node-fetch';
 const app = express();
 
 // Initialize Google OAuth client
@@ -839,6 +840,73 @@ app.get('/customers', authenticateJWT('admin'), async (req, res) => {
   }
 });
 
+// Hàm gửi hóa đơn qua EmailJS
+async function sendInvoiceEmail({ email, order_id, orders, cost, website_link }) {
+    try {
+        console.log('Preparing to send invoice email to:', email);
+        console.log('Order details:', { order_id, orders, cost });
+
+        const formatVND = (amount) => {
+            return new Intl.NumberFormat('vi-VN', {
+                style: 'decimal',
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0
+            }).format(amount) + '₫';
+        };
+
+        // Get customer name from the database
+        const [users] = await pool.query(
+            'SELECT full_name FROM users WHERE email = ?',
+            [email]
+        );
+        const customer_name = users[0]?.full_name || 'Khách hàng';
+
+        const templateParams = {
+            email,
+            order_id,
+            customer_name,
+            orders: orders.map(item => ({
+                name: item.name || 'Unknown Product',
+                units: item.units || 0,
+                price: formatVND(item.price)
+            })),
+            cost: {
+                shipping: formatVND(cost.shipping || 0),
+                tax: formatVND(cost.tax || 0),
+                total: formatVND(cost.total)
+            }
+        };
+
+        console.log('Sending email with template params:', templateParams);
+
+        const response = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'origin': 'http://localhost:8080'
+            },
+            body: JSON.stringify({
+                service_id: 'service_od6l0nu',
+                template_id: 'template_baqdk8g',
+                user_id: 'eFaqcexOZJb9-dlax',
+                template_params: templateParams
+            })
+        });
+
+        const responseText = await response.text();
+        console.log('EmailJS response:', responseText);
+
+        if (responseText.trim() !== 'OK') {
+            throw new Error('EmailJS gửi hóa đơn thất bại: ' + responseText);
+        }
+
+        console.log('Invoice email sent successfully');
+    } catch (error) {
+        console.error('Error sending invoice email:', error);
+        throw error;
+    }
+}
+
 // API tạo đơn hàng mới
 app.post('/orders', authenticateJWT(), async (req, res) => {
     try {
@@ -918,13 +986,64 @@ app.post('/orders', authenticateJWT(), async (req, res) => {
                 }
             );
 
+            // Sau khi lưu thành công:
+            // Lấy email user
+            let userEmail = null;
+            if (req.user && req.user.email) {
+                userEmail = req.user.email;
+            } else {
+                // Nếu chưa có, lấy từ DB
+                const [users] = await pool.query('SELECT email FROM users WHERE user_id = ?', [user_id]);
+                if (users.length > 0) userEmail = users[0].email;
+            }
+
+            // Lấy thông tin chi tiết sản phẩm cho email
+            const orderDetailsWithProducts = await Promise.all(order_details.map(async (detail) => {
+                const [products] = await pool.query(
+                    'SELECT name, price FROM products WHERE product_id = ?',
+                    [detail.product_id]
+                );
+                return {
+                    ...detail,
+                    name: products[0]?.name || 'Unknown Product',
+                    price: products[0]?.price || detail.price,
+                    units: detail.quantity
+                };
+            }));
+
+            // Gửi hóa đơn qua email
+            if (userEmail) {
+                try {
+                    await sendInvoiceEmail({
+                        email: userEmail,
+                        order_id: orderId,
+                        orders: orderDetailsWithProducts.map(item => ({
+                            name: item.name,
+                            units: item.units,
+                            price: item.price
+                        })),
+                        cost: {
+                            shipping: 0,
+                            tax: 0,
+                            total: total_amount
+                        }
+                    });
+                    console.log('Invoice email sent successfully to:', userEmail);
+                } catch (emailErr) {
+                    console.error('Lỗi gửi hóa đơn EmailJS:', emailErr);
+                    // Không throw để không ảnh hưởng tới việc trả về đơn hàng
+                }
+            } else {
+                console.warn('Could not send invoice email: No user email found');
+            }
+
             // Commit transaction
             await connection.commit();
             console.log('Transaction committed successfully');
 
             res.status(201).json({
                 success: true,
-                message: 'Đơn hàng đã được tạo thành công',
+                message: 'Đơn hàng đã được tạo và hóa đơn đã gửi về email!',
                 orderId
             });
         } catch (err) {
@@ -1417,6 +1536,97 @@ app.put('/users/:userId', authenticateJWT(), async (req, res) => {
         res.status(500).json({
             success: false,
             error: 'Lỗi server khi cập nhật thông tin'
+        });
+    }
+});
+
+// ================== API GỬI OTP ==================
+app.post('/send-otp', async (req, res) => {
+    try {
+        const { email } = req.body;
+        if (!email) {
+            return res.status(400).json({
+                success: false,
+                error: 'Email là bắt buộc'
+            });
+        }
+
+        // Generate 6-digit OTP
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+        // Format time in Vietnamese locale
+        const expiryTime = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes from now
+        const formattedTime = expiryTime.toLocaleString('vi-VN', {
+            hour: '2-digit',
+            minute: '2-digit',
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric'
+        }).replace(',', ' -');
+
+        // Prepare template params
+        const templateParams = {
+            passcode: otp,
+            time: formattedTime,
+            email: email
+        };
+
+        // Send email using EmailJS
+        const response = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'origin': 'http://localhost:8080'
+            },
+            body: JSON.stringify({
+                service_id: 'service_od6l0nu',
+                template_id: 'template_y0gfat7',
+                user_id: 'eFaqcexOZJb9-dlax',
+                template_params: templateParams
+            })
+        });
+
+        const responseText = await response.text();
+        console.log('EmailJS response text:', responseText);
+
+        if (responseText.trim() === 'OK') {
+            // Thành công!
+            return res.json({
+                success: true,
+                message: 'OTP đã được gửi đến email của bạn',
+                otp: otp // For development only
+            });
+        }
+
+        let responseData;
+        try {
+            responseData = JSON.parse(responseText);
+        } catch (parseError) {
+            // Nếu không phải JSON, trả về luôn nội dung lỗi cho client
+            console.error('Error parsing EmailJS response:', responseText);
+            return res.status(500).json({
+                success: false,
+                error: 'EmailJS raw error: ' + responseText
+            });
+        }
+
+        if (!response.ok || responseData.status !== 200) {
+            return res.status(500).json({
+                success: false,
+                error: 'EmailJS error: ' + (responseData.text || 'Unknown error')
+            });
+        }
+
+        res.json({
+            success: true,
+            message: 'OTP đã được gửi đến email của bạn',
+            otp: otp // For development only
+        });
+    } catch (err) {
+        console.error('Detailed error in send-otp:', err);
+        res.status(500).json({
+            success: false,
+            error: 'Lỗi server khi gửi OTP: ' + err.message
         });
     }
 });
